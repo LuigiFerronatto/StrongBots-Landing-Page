@@ -109,9 +109,9 @@ export default function Header() {
             <NavLink href="/#services" isActive={!isCasesPage && activeSection === "services"}>
               Soluções
             </NavLink>
-            <NavLink href="/#process" isActive={!isCasesPage && activeSection === "process"}>
+            {/* <NavLink href="/#process" isActive={!isCasesPage && activeSection === "process"}>
               Metodologia
-            </NavLink>
+            </NavLink> */}
             <NavLink href={isCasesPage ? "/#cases" : "#cases"} isActive={isCasesPage || activeSection === "cases"}>
               Cases
             </NavLink>
@@ -190,13 +190,13 @@ export default function Header() {
               >
                 Soluções
               </MobileNavLink>
-              <MobileNavLink
+              {/* <MobileNavLink
                 href="/#process"
                 onClick={() => setIsOpen(false)}
                 isActive={!isCasesPage && activeSection === "process"}
               >
                 Metodologia
-              </MobileNavLink>
+              </MobileNavLink> */}
               <MobileNavLink
                 href={isCasesPage ? "/#cases" : "#cases"}
                 onClick={() => setIsOpen(false)}
