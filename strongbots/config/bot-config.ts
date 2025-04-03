@@ -1,3 +1,4 @@
+// config/bot-config.ts
 export const botPrompt = {
     assistant: {
       role: "assistente virtual",

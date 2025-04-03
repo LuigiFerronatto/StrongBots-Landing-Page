@@ -1,3 +1,5 @@
+// strongbots/types/function-calls.ts
+
 // Tipos para as function calls do chatbot
 
 // Tipo para a função de coleta de informações de contato

@@ -67,5 +67,28 @@
     "objectives": "Melhorar o bot existente",
     "challenges": "Bot atual com baixo desempenho",
     "timestamp": "2025-04-03T08:45:37.346Z"
+  },
+  {
+    "name": "Usuário Anônimo",
+    "email": "usuario.anonimo@email.com",
+    "timestamp": "2025-04-03T08:57:01.016Z"
+  },
+  {
+    "name": "Luigi",
+    "email": "luigi_ferronatto@hotmail.com",
+    "company": "Blip",
+    "role": "Solutions Advocate",
+    "objectives": "Avaliar novas soluções para chatbots/IA",
+    "challenges": "Gerenciar uma grande base de clientes com a plataforma atual",
+    "timestamp": "2025-04-03T09:14:31.152Z"
+  },
+  {
+    "name": "Luigi",
+    "email": "luigi_ferronatto@hotmail.com",
+    "company": "Blip",
+    "role": "Solutions Advocate",
+    "objectives": "Avaliar novas soluções para a plataforma da empresa",
+    "challenges": "Gestão de muitos clientes com a plataforma atual",
+    "timestamp": "2025-04-03T09:21:08.669Z"
   }
 ]

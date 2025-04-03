@@ -2,7 +2,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 
 import { NextResponse } from "next/server"
 import { siteConfig } from "@/config/site-config"
-import type { FunctionCall, ScheduleResponse } from "@/types/function-calls"
+import type { FunctionCall, ScheduleResponse } from "@/app/api/chat/function-calls"
 import { processFunctionCall } from "./utils"
 
 // Função para sanitizar as mensagens do usuário e prevenir prompt injection
@@ -414,89 +414,40 @@ Você receberá uma confirmação por email com todos os detalhes. Obrigado por 
                   }
                 }
 
-                console.log("Returning final assistant message")
-                // Retornar a resposta final do assistente
-                try {
-                  // Verificar se a resposta é válida antes de retornar
-                  if (finalAssistantMessage && finalAssistantMessage.content) {
-                    console.log("Valid final message found, returning it")
-
-                    // Verificar se a mensagem menciona agendamento confirmado mas não tem detalhes
-                    if (
-                      finalAssistantMessage.content.includes("Agendamento confirmado") &&
-                      !finalAssistantMessage.content.includes("está marcada para")
-                    ) {
-                      console.log("Fixing incomplete confirmation message")
-
-                      // Tentar extrair detalhes do agendamento
-                      if (secondFunctionCall.name === "scheduleAppointment" && secondFunctionResult.result) {
-                        const scheduleResult = secondFunctionResult.result as ScheduleResponse
-
-                        if (scheduleResult.appointmentDetails) {
-                          const appointmentDate = new Date(scheduleResult.appointmentDetails.data_hora_inicio)
-                          const formattedDate = appointmentDate.toLocaleDateString("pt-BR")
-                          const formattedTime = appointmentDate.toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-
-                          return NextResponse.json({
-                            content: `✅ **Agendamento confirmado!**
-
-Sua consulta foi agendada com sucesso para o dia *${formattedDate}* às *${formattedTime}*.
-
-Você receberá uma confirmação por email com todos os detalhes. Obrigado por escolher a Strongbots! 🤖
-
-Tem alguma dúvida antes da nossa reunião?`,
-                            role: "assistant",
-                          })
-                        }
-                      }
-                    }
+                // CORREÇÃO AQUI: Simplificar o retorno da resposta final
+                if (finalAssistantMessage && finalAssistantMessage.content) {
+                  console.log("Returning simplified final message")
+                  return NextResponse.json({
+                    content: finalAssistantMessage.content,
+                    role: "assistant",
+                  })
+                } else if (secondFunctionCall.name === "scheduleAppointment" && secondFunctionResult.result) {
+                  // Fallback para agendamento
+                  const scheduleResult = secondFunctionResult.result as ScheduleResponse
+                  if (scheduleResult.appointmentDetails) {
+                    const appointmentDate = new Date(scheduleResult.appointmentDetails.data_hora_inicio)
+                    const formattedDate = appointmentDate.toLocaleDateString("pt-BR")
+                    const formattedTime = appointmentDate.toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
 
                     return NextResponse.json({
-                      content: finalAssistantMessage.content,
-                      role: "assistant",
-                    })
-                  } else {
-                    // Se não houver conteúdo válido, gerar uma resposta de fallback
-                    console.log("No valid content in final message, generating fallback")
-                    if (secondFunctionCall.name === "scheduleAppointment" && secondFunctionResult.result) {
-                      const scheduleResult = secondFunctionResult.result as ScheduleResponse
-
-                      if (scheduleResult.appointmentDetails) {
-                        const appointmentDate = new Date(scheduleResult.appointmentDetails.data_hora_inicio)
-                        const formattedDate = appointmentDate.toLocaleDateString("pt-BR")
-                        const formattedTime = appointmentDate.toLocaleTimeString("pt-BR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-
-                        return NextResponse.json({
-                          content: `✅ **Agendamento confirmado!**
+                      content: `✅ **Agendamento confirmado!**
 
 Sua consulta foi agendada com sucesso para o dia *${formattedDate}* às *${formattedTime}*. 
 
 Você receberá uma confirmação por email com todos os detalhes. Obrigado por escolher a Strongbots! 🤖`,
-                          role: "assistant",
-                        })
-                      }
-                    }
-
-                    // Fallback genérico se tudo falhar
-                    return NextResponse.json({
-                      content: "Sua solicitação foi processada com sucesso. Obrigado por escolher a Strongbots!",
                       role: "assistant",
                     })
                   }
-                } catch (responseError) {
-                  console.error("Error creating response:", responseError)
-                  // Fallback final
-                  return NextResponse.json({
-                    content: "Sua solicitação foi processada com sucesso. Obrigado por escolher a Strongbots!",
-                    role: "assistant",
-                  })
                 }
+
+                // Fallback genérico
+                return NextResponse.json({
+                  content: "Sua solicitação foi processada com sucesso. Obrigado por escolher a Strongbots!",
+                  role: "assistant",
+                })
               } catch (finalApiError) {
                 console.error("Error during final API call:", finalApiError)
 
