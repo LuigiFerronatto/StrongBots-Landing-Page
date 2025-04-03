@@ -91,7 +91,7 @@ export default function CtaSection() {
 
             <div className="relative h-64 md:h-auto order-first md:order-last overflow-hidden">
               <img
-                src="/cta-image.jpg"
+                src="/cta-image.png"
                 alt="AI Consulting"
                 className="object-cover w-full h-full absolute inset-0 transition-transform duration-700 hover:scale-105"
               />

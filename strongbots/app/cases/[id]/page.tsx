@@ -34,7 +34,7 @@ export default function CaseDetailPage({ params }: CasePageProps) {
     solution:
       "Chatbot com IA para qualificação e captura imediata de leads, com transição estratégica para suporte humano.",
     results: "Aumento significativo na taxa de conversão e redução no custo de aquisição de clientes.",
-    image: "/case-ecommerce.jpg",
+    image: "/case-ecommerce.png",
     metrics: [
       { value: "73%", label: "aumento na conversão de vendas", icon: "conversion" },
       { value: "42%", label: "redução no custo por lead", icon: "cost" },
@@ -189,7 +189,7 @@ export default function CaseDetailPage({ params }: CasePageProps) {
                   <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all">
                     <div className="h-40 relative">
                       <img
-                        src="/case-finance.jpg"
+                        src="/case-finance.png"
                         alt="Instituição Financeira"
                         className="w-full h-full object-cover"
                       />
@@ -213,7 +213,7 @@ export default function CaseDetailPage({ params }: CasePageProps) {
                   <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all">
                     <div className="h-40 relative">
                       <img
-                        src="/case-healthcare.jpg"
+                        src="/case-healthcare.png"
                         alt="Rede de Clínicas Médicas"
                         className="w-full h-full object-cover"
                       />

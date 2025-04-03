@@ -21,7 +21,7 @@ export function middleware(request: NextRequest) {
   // Adicionar cabeçalhos de cache para recursos estáticos
   if (
     request.nextUrl.pathname.startsWith("/images/") ||
-    request.nextUrl.pathname.endsWith(".jpg") ||
+    request.nextUrl.pathname.endsWith(".png") ||
     request.nextUrl.pathname.endsWith(".png") ||
     request.nextUrl.pathname.endsWith(".svg")
   ) {

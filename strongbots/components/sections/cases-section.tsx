@@ -26,7 +26,7 @@ export default function CasesSection() {
       challenge: "Inefficient customer service and lead loss due to delayed first contact.",
       solution: "AI chatbot for immediate lead qualification and capture, with strategic transition to human support.",
       results: "Significant increase in conversion rate and reduced customer acquisition cost.",
-      image: "/case-ecommerce.jpg",
+      image: "/case-ecommerce.png",
       metrics: [
         { value: "73%", label: "increase in sales conversion", icon: "conversion" },
         { value: "42%", label: "reduction in cost per lead", icon: "cost" },
@@ -40,7 +40,7 @@ export default function CasesSection() {
       challenge: "Appointment management difficulties and high no-show rates.",
       solution: "Multi-channel bot for scheduling, confirmations, and reminders with clinic system integration.",
       results: "Dramatic reduction in missed appointments and optimized professional schedules.",
-      image: "/case-healthcare.jpg",
+      image: "/case-healthcare.png",
       metrics: [
         { value: "68%", label: "reduction in missed appointments", icon: "conversion" },
         { value: "38%", label: "increase in schedule utilization", icon: "cost" },
@@ -54,7 +54,7 @@ export default function CasesSection() {
       challenge: "Complex onboarding process with high abandonment rate.",
       solution: "AI-guided conversational journey to simplify the account opening process.",
       results: "Increased onboarding completion rate and reduced process time.",
-      image: "/case-finance.jpg",
+      image: "/case-finance.png",
       metrics: [
         { value: "85%", label: "registration process completion", icon: "conversion" },
         { value: "67%", label: "reduction in onboarding time", icon: "cost" },

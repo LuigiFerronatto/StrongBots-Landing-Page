@@ -167,13 +167,13 @@ export default function ServicesSection() {
                 </Button>
                 <div className="flex items-center">
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                    <img src="/testimonial-1.jpg" alt="Cliente" className="object-cover w-full h-full" />
+                    <img src="/testimonial-1.png" alt="Cliente" className="object-cover w-full h-full" />
                   </div>
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white shadow-sm -ml-2">
-                    <img src="/testimonial-2.jpg" alt="Cliente" className="object-cover w-full h-full" />
+                    <img src="/testimonial-2.png" alt="Cliente" className="object-cover w-full h-full" />
                   </div>
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white shadow-sm -ml-2">
-                    <img src="/testimonial-3.jpg" alt="Cliente" className="object-cover w-full h-full" />
+                    <img src="/testimonial-3.png" alt="Cliente" className="object-cover w-full h-full" />
                   </div>
                   <Text variant="body-small" className="text-neutral-500 ml-2 text-xs md:text-sm">
                     +50 clientes satisfeitos

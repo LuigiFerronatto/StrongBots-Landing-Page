@@ -23,7 +23,7 @@ const successCases = [
     solution:
       "Chatbot com IA para qualificação e captura imediata de leads, com transição estratégica para suporte humano.",
     results: "Aumento significativo na taxa de conversão e redução no custo de aquisição de clientes.",
-    image: "/case-ecommerce.jpg",
+    image: "/case-ecommerce.png",
     metrics: [
       { value: "73%", label: "aumento na conversão de vendas", icon: "conversion" },
       { value: "42%", label: "redução no custo por lead", icon: "cost" },
@@ -37,7 +37,7 @@ const successCases = [
     challenge: "Dificuldades no gerenciamento de consultas e altas taxas de não comparecimento.",
     solution: "Bot multicanal para agendamento, confirmações e lembretes com integração ao sistema da clínica.",
     results: "Redução drástica nas consultas perdidas e otimização das agendas dos profissionais.",
-    image: "/case-healthcare.jpg",
+    image: "/case-healthcare.png",
     metrics: [
       { value: "68%", label: "redução nas faltas às consultas", icon: "conversion" },
       { value: "38%", label: "aumento na ocupação de agenda", icon: "cost" },
@@ -51,7 +51,7 @@ const successCases = [
     challenge: "Processo de onboarding complexo com alta taxa de abandono.",
     solution: "Jornada conversacional guiada por IA para simplificar o processo de abertura de conta.",
     results: "Aumento na taxa de conclusão do onboarding e redução no tempo do processo.",
-    image: "/case-finance.jpg",
+    image: "/case-finance.png",
     metrics: [
       { value: "85%", label: "conclusão do processo de cadastro", icon: "conversion" },
       { value: "67%", label: "redução no tempo de onboarding", icon: "cost" },

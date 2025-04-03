@@ -15,7 +15,7 @@ const testimonials: Testimonial[] = [
     role: "Marketing Director",
     company: "E-commerce Leader",
     text: "The chatbot developed by Strongbots completely transformed our sales process. I never imagined a bot could be so efficient at qualifying leads and directing only the most promising ones to our sales team.",
-    image: "/testimonial-1.jpg",
+    image: "/testimonial-1.png",
   },
   {
     id: 2,
@@ -23,7 +23,7 @@ const testimonials: Testimonial[] = [
     role: "Operations Manager",
     company: "Medical Clinic Network",
     text: "The implementation was surprisingly smooth and the results exceeded our expectations. The Strongbots team perfectly understood our needs and delivered a solution that truly solves our problems.",
-    image: "/testimonial-2.jpg",
+    image: "/testimonial-2.png",
   },
   {
     id: 3,
@@ -31,7 +31,7 @@ const testimonials: Testimonial[] = [
     role: "CTO",
     company: "Financial Institution",
     text: "What impressed me most was Strongbots' consultative approach. They didn't try to sell us a ready-made platform, but rather understood our business and developed a customized solution that truly delivered results.",
-    image: "/testimonial-3.jpg",
+    image: "/testimonial-3.png",
   },
 ]
 

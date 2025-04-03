@@ -11,25 +11,25 @@ const teamMembers = [
     name: "Mariana Santos",
     role: "CEO & Fundadora",
     bio: "Especialista em IA com mais de 10 anos de experiência em empresas de tecnologia. Formada em Ciência da Computação pela USP com MBA em Negócios Digitais.",
-    image: "/testimonial-1.jpg",
+    image: "/testimonial-1.png",
   },
   {
     name: "Carlos Mendes",
     role: "CTO",
     bio: "Engenheiro de Software com vasta experiência em desenvolvimento de soluções de IA. Liderou projetos de chatbots para grandes empresas do setor financeiro.",
-    image: "/testimonial-2.jpg",
+    image: "/testimonial-2.png",
   },
   {
     name: "Juliana Costa",
     role: "Diretora de Operações",
     bio: "Especialista em gestão de projetos com certificação PMP. Responsável por garantir a entrega de soluções de alta qualidade dentro do prazo.",
-    image: "/testimonial-3.jpg",
+    image: "/testimonial-3.png",
   },
   {
     name: "Roberto Alves",
     role: "Líder de Inovação",
     bio: "PhD em Inteligência Artificial com foco em processamento de linguagem natural. Responsável por manter a Strongbots na vanguarda tecnológica.",
-    image: "/testimonial-2.jpg",
+    image: "/testimonial-2.png",
   },
 ]
 
@@ -167,7 +167,7 @@ export default function AboutPage() {
               </div>
 
               <div className="relative h-64 md:h-auto order-first md:order-last">
-                <img src="/cta-image.jpg" alt="Equipe Strongbots" className="w-full h-full object-cover" />
+                <img src="/cta-image.png" alt="Equipe Strongbots" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/40 to-primary/10"></div>
               </div>
             </div>

@@ -1,0 +1,15 @@
+[
+  {
+    "titulo": "Consulta com",
+    "startTime": "2025-04-04T15:00:00-03:00",
+    "endTime": "2025-04-04T15:30:00-03:00",
+    "convidados": [
+      ""
+    ],
+    "descricao": "Consulta: Consultoria inicial gratuita",
+    "tipo_servico": "Consultoria inicial gratuita",
+    "id": "b2b9bca9-29f5-4233-963d-e34b0f3db2d6",
+    "created_at": "2025-04-03T08:31:16.209Z",
+    "status": "pending"
+  }
+]

@@ -39,7 +39,7 @@ export default function Home() {
         "/testimonial-1.png",
         "/testimonial-2.png",
         "/testimonial-3.png",
-        "/cta-image.jpg",
+        "/cta-image.png",
         "/chatbot-user.png",
       ]
 
