@@ -2,8 +2,39 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
 
 import { NextResponse } from "next/server"
 import { siteConfig } from "@/config/site-config"
-import type { FunctionCall, ScheduleResponse } from "@/app/api/chat/function-calls"
+import type { FunctionCall, ScheduleResponse } from "./function-calls"
 import { processFunctionCall } from "./utils"
+import {
+  SchedulingStatus,
+  getUserFriendlyErrorMessage,
+  formatAppointmentConfirmation,
+  getSchedulingFallbackMessage,
+} from "./scheduling-feedback"
+
+// Add a function to create a status message response
+function createStatusResponse(status: string): NextResponse {
+  return NextResponse.json({
+    content: status,
+    role: "assistant",
+    isStatusUpdate: true,
+  })
+}
+
+// Fix the handleSchedulingError function and error handling
+
+// Add a function to handle scheduling-related errors
+function handleSchedulingError(error: unknown, context = "scheduling"): NextResponse {
+  console.error(`Error in ${context}:`, error)
+
+  const errorMessage = error instanceof Error ? error.message : "Erro desconhecido"
+  const userFriendlyMessage = getUserFriendlyErrorMessage(errorMessage, context)
+
+  return NextResponse.json({
+    content: userFriendlyMessage,
+    role: "assistant",
+    error: true,
+  })
+}
 
 // Função para sanitizar as mensagens do usuário e prevenir prompt injection
 function sanitizeUserMessages(messages: any[]) {
@@ -233,8 +264,23 @@ Hoje é ${formattedCurrentDate}. Use esta data como referência para todas as ex
         const functionCall = assistantMessage.function_call as FunctionCall
         console.log(`Function call detected: ${functionCall.name}`)
 
+        // Send an immediate status update for scheduling-related functions
+        if (functionCall.name === "scheduleAppointment") {
+          // Send a status update to the client
+          createStatusResponse(SchedulingStatus.SCHEDULING)
+        } else if (functionCall.name === "getAvailableSlots") {
+          createStatusResponse(SchedulingStatus.CHECKING_AVAILABILITY)
+        } else if (functionCall.name === "collectContactInfo") {
+          createStatusResponse(SchedulingStatus.COLLECTING_INFO)
+        }
+
         // Usar a nova função processFunctionCall para processar a chamada de função
         const functionCallResult = await processFunctionCall(functionCall)
+
+        // If there's a status update, send it to the client
+        if (functionCallResult.statusUpdate) {
+          createStatusResponse(functionCallResult.statusUpdate)
+        }
 
         if (functionCallResult.success) {
           // Adicionar a resposta da função às mensagens
@@ -256,256 +302,472 @@ Hoje é ${formattedCurrentDate}. Use esta data como referência para todas as ex
           ]
 
           // Fazer nova requisição para a API com a resposta da função
-          const functionResponse = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "api-key": apiKey || "",
-            },
-            body: JSON.stringify({
-              model: model || "gpt-4",
-              messages: functionResponseMessages,
-              functions: availableFunctions,
-              function_call: "auto",
-              temperature: 0.7,
-              top_p: 1,
-              frequency_penalty: 0,
-              presence_penalty: 0,
-              max_tokens: 1000,
-            }),
-            signal: AbortSignal.timeout(15000),
-          })
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
 
-          if (!functionResponse.ok) {
-            throw new Error(`API request failed with status ${functionResponse.status}`)
-          }
+          try {
+            // Send a status update that we're processing the function result
+            if (functionCall.name === "scheduleAppointment") {
+              createStatusResponse(SchedulingStatus.CONFIRMING)
+            }
 
-          const functionData = await functionResponse.json()
-          const functionAssistantMessage = functionData.choices[0]?.message
+            const functionResponse = await fetch(endpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "api-key": apiKey || "",
+              },
+              body: JSON.stringify({
+                model: model || "gpt-4",
+                messages: functionResponseMessages,
+                functions: availableFunctions,
+                function_call: "auto",
+                temperature: 0.7,
+                top_p: 1,
+                frequency_penalty: 0,
+                presence_penalty: 0,
+                max_tokens: 1000,
+              }),
+              signal: controller.signal,
+            })
 
-          // Verificar se o assistente está chamando outra função após receber o resultado da primeira
-          if (functionAssistantMessage.function_call) {
-            // Processar a segunda chamada de função
-            const secondFunctionCall = functionAssistantMessage.function_call as FunctionCall
-            console.log(`Second function call detected: ${secondFunctionCall.name}`)
+            clearTimeout(timeoutId)
 
-            const secondFunctionResult = await processFunctionCall(secondFunctionCall)
-            console.log(`Second function result:`, JSON.stringify(secondFunctionResult, null, 2))
+            if (!functionResponse.ok) {
+              throw new Error(`API request failed with status ${functionResponse.status}`)
+            }
 
-            if (secondFunctionResult.success && secondFunctionResult.result) {
-              // Adicionar a resposta da segunda função às mensagens
-              const secondFunctionMessages = [
-                ...functionResponseMessages,
-                {
-                  role: "assistant",
-                  content: null,
-                  function_call: {
+            const functionData = await functionResponse.json()
+            const functionAssistantMessage = functionData.choices[0]?.message
+
+            // Verificar se o assistente está chamando outra função após receber o resultado da primeira
+            if (functionAssistantMessage.function_call) {
+              const secondFunctionCall = functionAssistantMessage.function_call as FunctionCall
+              console.log(`Second function call detected: ${secondFunctionCall.name}`)
+
+              // Send a status update for the second function call
+              if (secondFunctionCall.name === "scheduleAppointment") {
+                createStatusResponse(SchedulingStatus.SCHEDULING)
+              }
+
+              const secondFunctionResult = await processFunctionCall(secondFunctionCall)
+              console.log(`Second function result:`, JSON.stringify(secondFunctionResult, null, 2))
+
+              // If there's a status update from the second function, send it to the client
+              if (secondFunctionResult.statusUpdate) {
+                createStatusResponse(secondFunctionResult.statusUpdate)
+              }
+
+              if (secondFunctionResult.success && secondFunctionResult.result) {
+                // Adicionar a resposta da segunda função às mensagens
+                const secondFunctionMessages = [
+                  ...functionResponseMessages,
+                  {
+                    role: "assistant",
+                    content: null,
+                    function_call: {
+                      name: secondFunctionCall.name,
+                      arguments: secondFunctionCall.arguments,
+                    },
+                  },
+                  {
+                    role: "function",
                     name: secondFunctionCall.name,
-                    arguments: secondFunctionCall.arguments,
+                    content: JSON.stringify(secondFunctionResult.result),
                   },
-                },
-                {
-                  role: "function",
-                  name: secondFunctionCall.name,
-                  content: JSON.stringify(secondFunctionResult.result),
-                },
-              ]
+                ]
 
-              console.log("Preparing to make final API call with second function result")
+                console.log("Preparing to make final API call with second function result")
 
-              try {
-                // Fazer nova requisição para a API com a resposta da segunda função
-                console.log("Making final API call...")
-                const finalResponse = await fetch(endpoint, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "api-key": apiKey || "",
-                  },
-                  body: JSON.stringify({
-                    model: model || "gpt-4",
-                    messages: secondFunctionMessages,
-                    functions: availableFunctions,
-                    function_call: "auto",
-                    temperature: 0.7,
-                    top_p: 1,
-                    frequency_penalty: 0,
-                    presence_penalty: 0,
-                    max_tokens: 1000,
-                  }),
-                  signal: AbortSignal.timeout(15000),
-                })
+                try {
+                  // Send a status update that we're finalizing the appointment
+                  if (secondFunctionCall.name === "scheduleAppointment") {
+                    createStatusResponse(SchedulingStatus.CONFIRMING)
+                  }
 
-                console.log(`Final API response status: ${finalResponse.status}`)
+                  // Fazer nova requisição para a API com a resposta da segunda função
+                  console.log("Making final API call...")
 
-                if (!finalResponse.ok) {
-                  const errorText = await finalResponse.text()
-                  console.error(`Final API request failed with status ${finalResponse.status}: ${errorText}`)
+                  const controller = new AbortController()
+                  const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
 
-                  // Se a requisição final falhar, gerar uma resposta de sucesso com base no resultado da função
-                  if (secondFunctionCall.name === "scheduleAppointment" && secondFunctionResult.result) {
-                    console.log("Generating fallback response for scheduleAppointment")
-                    // Verificar se o resultado é do tipo ScheduleResponse e tem appointmentDetails
-                    const scheduleResult = secondFunctionResult.result as ScheduleResponse
+                  try {
+                    const finalResponse = await fetch(endpoint, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "api-key": apiKey || "",
+                      },
+                      body: JSON.stringify({
+                        model: model || "gpt-4",
+                        messages: secondFunctionMessages,
+                        functions: availableFunctions,
+                        function_call: "auto",
+                        temperature: 0.7,
+                        top_p: 1,
+                        frequency_penalty: 0,
+                        presence_penalty: 0,
+                        max_tokens: 1000,
+                      }),
+                      signal: controller.signal,
+                    })
 
-                    if (scheduleResult.appointmentDetails) {
-                      console.log("Found appointmentDetails, generating formatted response")
-                      const appointmentDate = new Date(scheduleResult.appointmentDetails.data_hora_inicio)
-                      const formattedDate = appointmentDate.toLocaleDateString("pt-BR")
-                      const formattedTime = appointmentDate.toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                    clearTimeout(timeoutId)
 
-                      console.log(`Returning success response with date: ${formattedDate} and time: ${formattedTime}`)
+                    console.log(`Final API response status: ${finalResponse.status}`)
+
+                    if (!finalResponse.ok) {
+                      const errorText = await finalResponse.text()
+                      console.error(`Final API request failed with status ${finalResponse.status}: ${errorText}`)
+
+                      // Se a requisição final falhar, gerar uma resposta de sucesso com base no resultado da função
+                      if (secondFunctionCall.name === "scheduleAppointment" && secondFunctionResult.result) {
+                        console.log("Generating fallback response for scheduleAppointment")
+                        // Verificar se o resultado é do tipo ScheduleResponse e tem appointmentDetails
+                        const scheduleResult = secondFunctionResult.result as ScheduleResponse
+
+                        if (scheduleResult.success && scheduleResult.appointmentDetails) {
+                          console.log("Found appointmentDetails, generating formatted response")
+
+                          // Use the formatting utility to create a nice confirmation message
+                          const confirmationMessage = formatAppointmentConfirmation(scheduleResult.appointmentDetails)
+
+                          console.log(`Returning success response with formatted confirmation`)
+                          return NextResponse.json({
+                            content: confirmationMessage,
+                            role: "assistant",
+                            appointmentDetails: scheduleResult.appointmentDetails,
+                          })
+                        } else if (!scheduleResult.success) {
+                          // Handle scheduling conflicts
+                          console.log("Scheduling conflict detected, suggesting alternatives")
+
+                          let message = `Desculpe, o horário solicitado não está disponível. `
+
+                          // If we have alternative suggestions, include them
+                          if (
+                            scheduleResult.alternativeSuggestions &&
+                            scheduleResult.alternativeSuggestions.length > 0
+                          ) {
+                            message += `\n\nPor favor, considere os seguintes horários alternativos:\n\n`
+                            scheduleResult.alternativeSuggestions.forEach((slot) => {
+                              message += `- ${slot}\n`
+                            })
+                          } else if (scheduleResult.availableSlots && scheduleResult.availableSlots.length > 0) {
+                            message += `\n\nTemos os seguintes horários disponíveis:\n\n`
+                            scheduleResult.availableSlots.forEach((slot) => {
+                              message += `- ${slot}\n`
+                            })
+                          }
+
+                          message += `\n\nPor favor, escolha um horário alternativo que seja conveniente para você. 📅`
+
+                          return NextResponse.json({
+                            content: message,
+                            role: "assistant",
+                            conflict: true,
+                          })
+                        } else {
+                          console.log("No appointmentDetails found in scheduleResult:", scheduleResult)
+                        }
+                      }
+
+                      throw new Error(`Final API request failed with status ${finalResponse.status}: ${errorText}`)
+                    }
+
+                    console.log("Final API call successful, parsing response...")
+                    const finalData = await finalResponse.json()
+                    console.log("Final API response data:", JSON.stringify(finalData, null, 2))
+
+                    const finalAssistantMessage = finalData.choices[0]?.message
+                    console.log("Final assistant message:", JSON.stringify(finalAssistantMessage, null, 2))
+
+                    // Verificar se a resposta final contém conteúdo
+                    if (
+                      (!finalAssistantMessage.content || finalAssistantMessage.content.trim() === "") &&
+                      secondFunctionCall.name === "scheduleAppointment" &&
+                      secondFunctionResult.result
+                    ) {
+                      console.log("Final message has no content, generating formatted response")
+                      // Verificar se o resultado é do tipo ScheduleResponse e tem appointmentDetails
+                      const scheduleResult = secondFunctionResult.result as ScheduleResponse
+
+                      if (scheduleResult.success && scheduleResult.appointmentDetails) {
+                        console.log("Found appointmentDetails, generating formatted response")
+
+                        // Use the formatting utility to create a nice confirmation message
+                        const confirmationMessage = formatAppointmentConfirmation(scheduleResult.appointmentDetails)
+
+                        console.log(`Returning success response with formatted confirmation`)
+                        return NextResponse.json({
+                          content: confirmationMessage,
+                          role: "assistant",
+                          appointmentDetails: scheduleResult.appointmentDetails,
+                        })
+                      } else if (!scheduleResult.success) {
+                        // Handle scheduling conflicts
+                        console.log("Scheduling conflict detected, suggesting alternatives")
+
+                        let message = `Desculpe, o horário solicitado não está disponível. `
+
+                        // If we have alternative suggestions, include them
+                        if (scheduleResult.alternativeSuggestions && scheduleResult.alternativeSuggestions.length > 0) {
+                          message += `\n\nPor favor, considere os seguintes horários alternativos:\n\n`
+                          scheduleResult.alternativeSuggestions.forEach((slot) => {
+                            message += `- ${slot}\n`
+                          })
+                        } else if (scheduleResult.availableSlots && scheduleResult.availableSlots.length > 0) {
+                          message += `\n\nTemos os seguintes horários disponíveis:\n\n`
+                          scheduleResult.availableSlots.forEach((slot) => {
+                            message += `- ${slot}\n`
+                          })
+                        }
+
+                        message += `\n\nPor favor, escolha um horário alternativo que seja conveniente para você. 📅`
+
+                        return NextResponse.json({
+                          content: message,
+                          role: "assistant",
+                          conflict: true,
+                        })
+                      } else {
+                        console.log("No appointmentDetails found in scheduleResult:", scheduleResult)
+                      }
+                    }
+
+                    // CORREÇÃO AQUI: Simplificar o retorno da resposta final
+                    if (finalAssistantMessage && finalAssistantMessage.content) {
+                      console.log("Returning simplified final message")
                       return NextResponse.json({
-                        content: `✅ **Agendamento confirmado!**
-
-Sua consulta foi agendada com sucesso para o dia *${formattedDate}* às *${formattedTime}*. 
-
-Você receberá uma confirmação por email com todos os detalhes. Obrigado por escolher a Strongbots! 🤖`,
+                        content: finalAssistantMessage.content,
                         role: "assistant",
                       })
-                    } else {
-                      console.log("No appointmentDetails found in scheduleResult:", scheduleResult)
+                    } else if (secondFunctionCall.name === "scheduleAppointment" && secondFunctionResult.result) {
+                      // Fallback para agendamento
+                      const scheduleResult = secondFunctionResult.result as ScheduleResponse
+                      if (scheduleResult.success && scheduleResult.appointmentDetails) {
+                        // Use the formatting utility to create a nice confirmation message
+                        const confirmationMessage = formatAppointmentConfirmation(scheduleResult.appointmentDetails)
+
+                        return NextResponse.json({
+                          content: confirmationMessage,
+                          role: "assistant",
+                          appointmentDetails: scheduleResult.appointmentDetails,
+                        })
+                      } else if (!scheduleResult.success) {
+                        // Handle scheduling conflicts
+                        console.log("Scheduling conflict detected, suggesting alternatives")
+
+                        let message = `Desculpe, o horário solicitado não está disponível. `
+
+                        // If we have alternative suggestions, include them
+                        if (scheduleResult.alternativeSuggestions && scheduleResult.alternativeSuggestions.length > 0) {
+                          message += `\n\nPor favor, considere os seguintes horários alternativos:\n\n`
+                          scheduleResult.alternativeSuggestions.forEach((slot) => {
+                            message += `- ${slot}\n`
+                          })
+                        } else if (scheduleResult.availableSlots && scheduleResult.availableSlots.length > 0) {
+                          message += `\n\nTemos os seguintes horários disponíveis:\n\n`
+                          scheduleResult.availableSlots.forEach((slot) => {
+                            message += `- ${slot}\n`
+                          })
+                        }
+
+                        message += `\n\nPor favor, escolha um horário alternativo que seja conveniente para você. 📅`
+
+                        return NextResponse.json({
+                          content: message,
+                          role: "assistant",
+                          conflict: true,
+                        })
+                      }
+                    }
+
+                    // Fallback genérico
+                    return NextResponse.json({
+                      content: "Sua solicitação foi processada com sucesso. Obrigado por escolher a Strongbots!",
+                      role: "assistant",
+                    })
+                  } catch (error: unknown) {
+                    clearTimeout(timeoutId)
+
+                    // Handle abort errors specifically
+                    if (error instanceof Error && error.name === "AbortError") {
+                      console.log("Request was aborted due to timeout")
+                      // Return a friendly timeout message
+                      return NextResponse.json({
+                        content:
+                          "Estamos enfrentando uma lentidão temporária. Suas informações foram salvas. Você pode tentar novamente em alguns instantes ou entrar em contato pelo WhatsApp para confirmar seu agendamento.",
+                        role: "assistant",
+                        error: true,
+                        timeout: true,
+                      })
+                    }
+
+                    console.error("Error during final API call:", error)
+
+                    // Tentar gerar uma resposta de fallback para o agendamento
+                    if (secondFunctionCall.name === "scheduleAppointment" && secondFunctionResult.result) {
+                      console.log("Generating fallback response after API error")
+                      const scheduleResult = secondFunctionResult.result as ScheduleResponse
+
+                      if (scheduleResult.success && scheduleResult.appointmentDetails) {
+                        console.log("Found appointmentDetails, generating formatted response")
+
+                        // Use the formatting utility to create a nice confirmation message
+                        const confirmationMessage = formatAppointmentConfirmation(scheduleResult.appointmentDetails)
+
+                        console.log(`Returning success response with formatted confirmation`)
+                        return NextResponse.json({
+                          content: confirmationMessage,
+                          role: "assistant",
+                          appointmentDetails: scheduleResult.appointmentDetails,
+                        })
+                      } else if (!scheduleResult.success) {
+                        // Handle scheduling conflicts
+                        return NextResponse.json({
+                          content: `Desculpe, o horário solicitado não está disponível. Por favor, escolha outro horário.`,
+                          role: "assistant",
+                          conflict: true,
+                        })
+                      }
+                    }
+
+                    // Fallback genérico com opções de contato
+                    return NextResponse.json({
+                      content: getSchedulingFallbackMessage(),
+                      role: "assistant",
+                      error: true,
+                    })
+                  }
+                } catch (finalApiError) {
+                  console.error("Error during final API call:", finalApiError)
+
+                  // Tentar gerar uma resposta de fallback para o agendamento
+                  if (secondFunctionCall.name === "scheduleAppointment" && secondFunctionResult.result) {
+                    console.log("Generating fallback response after API error")
+                    const scheduleResult = secondFunctionResult.result as ScheduleResponse
+
+                    if (scheduleResult.success && scheduleResult.appointmentDetails) {
+                      console.log("Found appointmentDetails, generating formatted response")
+
+                      // Use the formatting utility to create a nice confirmation message
+                      const confirmationMessage = formatAppointmentConfirmation(scheduleResult.appointmentDetails)
+
+                      return NextResponse.json({
+                        content: confirmationMessage,
+                        role: "assistant",
+                        appointmentDetails: scheduleResult.appointmentDetails,
+                      })
+                    } else if (!scheduleResult.success) {
+                      // Handle scheduling conflicts
+                      return NextResponse.json({
+                        content: `Desculpe, o horário solicitado não está disponível. Por favor, escolha outro horário.`,
+                        role: "assistant",
+                        conflict: true,
+                      })
                     }
                   }
 
-                  throw new Error(`Final API request failed with status ${finalResponse.status}: ${errorText}`)
-                }
-
-                console.log("Final API call successful, parsing response...")
-                const finalData = await finalResponse.json()
-                console.log("Final API response data:", JSON.stringify(finalData, null, 2))
-
-                const finalAssistantMessage = finalData.choices[0]?.message
-                console.log("Final assistant message:", JSON.stringify(finalAssistantMessage, null, 2))
-
-                // Verificar se a resposta final contém conteúdo
-                if (
-                  (!finalAssistantMessage.content || finalAssistantMessage.content.trim() === "") &&
-                  secondFunctionCall.name === "scheduleAppointment" &&
-                  secondFunctionResult.result
-                ) {
-                  console.log("Final message has no content, generating formatted response")
-                  // Verificar se o resultado é do tipo ScheduleResponse e tem appointmentDetails
-                  const scheduleResult = secondFunctionResult.result as ScheduleResponse
-
-                  if (scheduleResult.appointmentDetails) {
-                    console.log("Found appointmentDetails, generating formatted response")
-                    const appointmentDate = new Date(scheduleResult.appointmentDetails.data_hora_inicio)
-                    const formattedDate = appointmentDate.toLocaleDateString("pt-BR")
-                    const formattedTime = appointmentDate.toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-
-                    console.log(`Returning success response with date: ${formattedDate} and time: ${formattedTime}`)
-                    return NextResponse.json({
-                      content: `✅ **Agendamento confirmado!**
-
-Sua consulta foi agendada com sucesso para o dia *${formattedDate}* às *${formattedTime}*. 
-
-Você receberá uma confirmação por email com todos os detalhes. Obrigado por escolher a Strongbots! 🤖`,
-                      role: "assistant",
-                    })
-                  } else {
-                    console.log("No appointmentDetails found in scheduleResult:", scheduleResult)
-                  }
-                }
-
-                // CORREÇÃO AQUI: Simplificar o retorno da resposta final
-                if (finalAssistantMessage && finalAssistantMessage.content) {
-                  console.log("Returning simplified final message")
+                  // Fallback genérico com opções de contato
                   return NextResponse.json({
-                    content: finalAssistantMessage.content,
+                    content: getSchedulingFallbackMessage(),
                     role: "assistant",
+                    error: true,
                   })
-                } else if (secondFunctionCall.name === "scheduleAppointment" && secondFunctionResult.result) {
-                  // Fallback para agendamento
-                  const scheduleResult = secondFunctionResult.result as ScheduleResponse
-                  if (scheduleResult.appointmentDetails) {
-                    const appointmentDate = new Date(scheduleResult.appointmentDetails.data_hora_inicio)
-                    const formattedDate = appointmentDate.toLocaleDateString("pt-BR")
-                    const formattedTime = appointmentDate.toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                }
+              } else {
+                // If there was an error executing the second function
+                console.error("Error executing second function:", secondFunctionResult.error)
 
+                // Check if the error is recoverable (like a timeout)
+                if (secondFunctionResult.recoverable) {
+                  // For scheduling errors, provide a more helpful message
+                  if (secondFunctionCall.name === "scheduleAppointment") {
                     return NextResponse.json({
-                      content: `✅ **Agendamento confirmado!**
-
-Sua consulta foi agendada com sucesso para o dia *${formattedDate}* às *${formattedTime}*. 
-
-Você receberá uma confirmação por email com todos os detalhes. Obrigado por escolher a Strongbots! 🤖`,
+                      content: `Desculpe, estamos enfrentando uma lentidão temporária no sistema de agendamento. Suas informações foram salvas e você pode tentar novamente em alguns instantes ou entrar em contato pelo WhatsApp para confirmar seu agendamento. 📱`,
                       role: "assistant",
+                      error: true,
+                      recoverable: true,
                     })
                   }
                 }
 
-                // Fallback genérico
-                return NextResponse.json({
-                  content: "Sua solicitação foi processada com sucesso. Obrigado por escolher a Strongbots!",
-                  role: "assistant",
-                })
-              } catch (finalApiError) {
-                console.error("Error during final API call:", finalApiError)
-
-                // Tentar gerar uma resposta de fallback para o agendamento
-                if (secondFunctionCall.name === "scheduleAppointment" && secondFunctionResult.result) {
-                  console.log("Generating fallback response after API error")
-                  const scheduleResult = secondFunctionResult.result as ScheduleResponse
-
-                  if (scheduleResult.appointmentDetails) {
-                    console.log("Found appointmentDetails, generating formatted response")
-                    const appointmentDate = new Date(scheduleResult.appointmentDetails.data_hora_inicio)
-                    const formattedDate = appointmentDate.toLocaleDateString("pt-BR")
-                    const formattedTime = appointmentDate.toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-
-                    console.log(`Returning success response with date: ${formattedDate} and time: ${formattedTime}`)
-                    return NextResponse.json({
-                      content: `✅ **Agendamento confirmado!**
-
-Sua consulta foi agendada com sucesso para o dia *${formattedDate}* às *${formattedTime}*. 
-
-Você receberá uma confirmação por email com todos os detalhes. Obrigado por escolher a Strongbots! 🤖`,
-                      role: "assistant",
-                    })
-                  }
+                // If there's a user-friendly message, use it
+                if (secondFunctionResult.userMessage) {
+                  return NextResponse.json({
+                    content: secondFunctionResult.userMessage,
+                    role: "assistant",
+                    error: true,
+                  })
                 }
 
-                // Fallback genérico
                 return NextResponse.json({
-                  content: "Sua solicitação foi processada com sucesso. Obrigado por escolher a Strongbots!",
+                  content: `Desculpe, ocorreu um erro ao processar sua solicitação: ${secondFunctionResult.error}`,
                   role: "assistant",
+                  error: true,
                 })
               }
-            } else {
-              // Se houve erro na execução da segunda função
-              console.error("Error executing second function:", secondFunctionResult.error)
+            }
+
+            // Retornar a resposta do assistente após processar a função
+            return NextResponse.json({
+              content: functionAssistantMessage.content || "Sua solicitação foi processada com sucesso.",
+              role: "assistant",
+            })
+          } catch (error: unknown) {
+            clearTimeout(timeoutId)
+
+            // Handle abort errors specifically
+            if (error instanceof Error && error.name === "AbortError") {
+              console.log("Request was aborted due to timeout")
+              // Return a friendly timeout message
               return NextResponse.json({
-                content: `Desculpe, ocorreu um erro ao processar sua solicitação: ${secondFunctionResult.error}`,
+                content:
+                  "Estamos enfrentando uma lentidão temporária. Suas informações foram salvas. Você pode tentar novamente em alguns instantes ou entrar em contato pelo WhatsApp para confirmar seu agendamento.",
                 role: "assistant",
+                error: true,
+                timeout: true,
               })
             }
-          }
 
-          // Retornar a resposta do assistente após processar a função
-          return NextResponse.json({
-            content: functionAssistantMessage.content || "Sua solicitação foi processada com sucesso.",
-            role: "assistant",
-          })
+            // Se houve erro na execução da função, retornar mensagem de erro
+            console.error("Error executing function:", functionCallResult.error)
+
+            // If there's a user-friendly message, use it
+            if (functionCallResult.userMessage) {
+              return NextResponse.json({
+                content: functionCallResult.userMessage,
+                role: "assistant",
+                error: true,
+              })
+            }
+
+            // Retornar a chamada de função para o cliente processar ou uma mensagem de erro
+            return NextResponse.json({
+              content: `Desculpe, ocorreu um erro ao processar sua solicitação: ${functionCallResult.error}`,
+              role: "assistant",
+              error: true,
+            })
+          }
         } else {
           // Se houve erro na execução da função, retornar mensagem de erro
           console.error("Error executing function:", functionCallResult.error)
+
+          // If there's a user-friendly message, use it
+          if (functionCallResult.userMessage) {
+            return NextResponse.json({
+              content: functionCallResult.userMessage,
+              role: "assistant",
+              error: true,
+            })
+          }
 
           // Retornar a chamada de função para o cliente processar ou uma mensagem de erro
           return NextResponse.json({
             content: `Desculpe, ocorreu um erro ao processar sua solicitação: ${functionCallResult.error}`,
             role: "assistant",
+            error: true,
           })
         }
       }
@@ -515,13 +777,14 @@ Você receberá uma confirmação por email com todos os detalhes. Obrigado por 
         content: assistantMessage.content || "Não foi possível processar sua solicitação.",
         role: "assistant",
       })
-    } catch (fetchError) {
-      console.error("Error fetching from OpenAI API:", fetchError)
+    } catch (error) {
+      console.error("Error fetching from OpenAI API:", error)
 
       // Retornar resposta de fallback em caso de erro na requisição
       return NextResponse.json({
         content: getFallbackResponse(lastUserMessage),
         role: "assistant",
+        error: true,
       })
     }
   } catch (error) {
@@ -533,6 +796,7 @@ Você receberá uma confirmação por email com todos os detalhes. Obrigado por 
         content:
           "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde ou entre em contato pelo WhatsApp.",
         role: "assistant",
+        error: true,
       },
       { status: 200 }, // Retornamos 200 mesmo em caso de erro para não quebrar a UI
     )

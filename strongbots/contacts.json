@@ -90,5 +90,41 @@
     "objectives": "Avaliar novas soluções para a plataforma da empresa",
     "challenges": "Gestão de muitos clientes com a plataforma atual",
     "timestamp": "2025-04-03T09:21:08.669Z"
+  },
+  {
+    "name": "Luigi Ferronatto",
+    "email": "luigi.ferronatto@blip.com",
+    "company": "Blip",
+    "role": "Gerente de Projetos",
+    "objectives": "Melhorar a eficiência dos nossos chatbots",
+    "challenges": "Problemas técnicos com os chatbots atuais que a equipe não está conseguindo resolver",
+    "timestamp": "2025-04-03T09:30:27.805Z"
+  },
+  {
+    "name": "Luigi Ferronatto",
+    "email": "luigi.ferronatto@blip.com",
+    "company": "Blip",
+    "role": "Gerente de Projetos",
+    "objectives": "Melhorar a eficiência dos nossos chatbots",
+    "challenges": "Estamos enfrentando problemas em nossos chatbots que nossa equipe não está conseguindo resolver",
+    "timestamp": "2025-04-03T09:31:49.034Z"
+  },
+  {
+    "name": "Luigi Ferronatto",
+    "email": "luigi.ferronatto@blip.com",
+    "company": "Blip",
+    "role": "Diretor de Operações",
+    "objectives": "Melhorar a eficiência dos nossos chatbots",
+    "challenges": "Estamos enfrentando problemas com nossos chatbots que nossa equipe não consegue resolver",
+    "timestamp": "2025-04-03T09:32:17.466Z"
+  },
+  {
+    "name": "Luigi Ferronatto",
+    "email": "luigi_ferronatto@hotmail.com",
+    "company": "Cosmobots",
+    "role": "Gerente",
+    "objectives": "Conhecer a plataforma da Strongbots",
+    "challenges": "Melhorar a plataforma atual que está causando perda de clientes",
+    "timestamp": "2025-04-03T10:02:47.101Z"
   }
 ]
