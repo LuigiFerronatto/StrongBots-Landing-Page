@@ -1,0 +1,17 @@
+name: Cron Jobs for StrongBots
+
+on:
+  schedule:
+    # Executa a cada 6 horas (00h, 6h, 12h, 18h UTC)
+    - cron: "0 */6 * * *"
+  workflow_dispatch: # permite rodar manualmente via GitHub
+
+jobs:
+  run-strongbots-crons:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /api/refresh-token
+        run: curl -s https://www.strongbots.chat/api/refresh-token
+
+      - name: Call /api/process-pending
+        run: curl -s https://www.strongbots.chat/api/process-pending
