@@ -67,11 +67,8 @@ export function SimpleCalendar({
     today.setHours(0, 0, 0, 0)
 
     return (
-      date < today ||
-      date.getDay() === 0 || // Domingo
-      date.getDay() === 6 || // Sábado
-      date > new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000) || // Mais de 30 dias no futuro
-      !isDateAvailable(date)
+      date < today || // Datas passadas
+      !isDateAvailable(date) // Datas não disponíveis
     )
   }
 
@@ -140,6 +137,7 @@ export function SimpleCalendar({
       const disabled = isDateDisabled(date)
       const isSelectedDate = isDateSelected(date)
       const isTodayDate = isToday(date)
+      const isAvailable = isDateAvailable(date)
 
       days.push(
         <Button
@@ -153,7 +151,7 @@ export function SimpleCalendar({
             disabled ? "text-muted-foreground opacity-50 cursor-not-allowed" : "hover:bg-muted",
             isSelectedDate ? "bg-primary-700 text-white hover:bg-primary-800" : "",
             isTodayDate && !isSelectedDate ? "bg-primary-100 text-primary-700 font-medium" : "",
-            isDateAvailable(date) && !isSelectedDate && !isTodayDate ? "border-2 border-primary-100" : "",
+            isAvailable && !isSelectedDate && !isTodayDate ? "border-2 border-primary-100" : "",
           )}
         >
           {day}

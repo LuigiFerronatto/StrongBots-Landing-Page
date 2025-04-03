@@ -17,6 +17,18 @@ export const siteConfig = {
     cta: true,
   },
 
+  // Rotas do site que podem ser ativadas/desativadas
+  routes: {
+    admin: true, // Painel administrativo
+    about: true, // Página Sobre Nós
+    contact: true, // Página de Contato
+    blog: true, // Blog
+    cases: true, // Página de Cases
+    terms: true, // Termos de Serviço
+    privacy: true, // Política de Privacidade
+    cookies: true, // Política de Cookies
+  },
+
   // Configurações de contato
   contact: {
     email: "contact@strongbots.com",
@@ -49,8 +61,14 @@ export const siteConfig = {
     // Usar a função importada para gerar o prompt
     systemPrompt: generateSystemPrompt(),
   },
+
+  admin: {
+    links: [
+      {title: "Dashboard", href: "/admin/dashboard", description: "Monitorar status do sistema e tokens"},
+      {title: "Configurações", href: "/admin/settings"},
+    ]
+  }
 }
 
 // Tipos para facilitar o uso com TypeScript
 export type SiteConfig = typeof siteConfig
-

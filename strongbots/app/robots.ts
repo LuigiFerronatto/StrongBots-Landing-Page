@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/api/", "/admin/"],
     },
-    sitemap: "https://www.strongbots.chat/sitemap.xml",
+    sitemap: "https://www.strongbots.com/sitemap.xml",
   }
 }
 

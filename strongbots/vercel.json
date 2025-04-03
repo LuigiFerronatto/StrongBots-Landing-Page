@@ -1,0 +1,18 @@
+{
+    "crons": [
+      {
+        "path": "/api/refresh-token",
+        "schedule": "0 */12 * * *"
+      },
+      {
+        "path": "/api/process-pending",
+        "schedule": "0 */6 * * *"
+      }
+    ]
+  }
+  
+  
+  
+  
+  
+  

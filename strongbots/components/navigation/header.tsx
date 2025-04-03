@@ -119,6 +119,10 @@ export default function Header() {
               Depoimentos
             </NavLink>
 
+            <NavLink href="/contato" isActive={pathname === "/contato"}>
+              Contato
+            </NavLink>
+
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="ml-4">
               <Button
                 onClick={() => setChatbotOpen(true)}
@@ -207,6 +211,11 @@ export default function Header() {
               >
                 Depoimentos
               </MobileNavLink>
+
+              <MobileNavLink href="/contato" onClick={() => setIsOpen(false)} isActive={pathname === "/contato"}>
+                Contato
+              </MobileNavLink>
+
               <div className="h-px w-full bg-primary-100 my-2"></div>
               <Button
                 onClick={() => {
@@ -245,6 +254,17 @@ function NavLink({ href, children, isActive = false }: NavLinkProps) {
     return null
   }
 
+  // Verificar se é uma rota e se está desativada
+  if (href.startsWith("/") && !href.includes("#")) {
+    // Extrair o nome da rota (por exemplo, "/contato" -> "contato", "/about" -> "about")
+    const routeName = href.split("/")[1] || "" // Pega o primeiro segmento após a barra
+
+    // Verificar se a rota existe no siteConfig e está desativada
+    if (routeName && siteConfig.routes[routeName as keyof typeof siteConfig.routes] === false) {
+      return null
+    }
+  }
+
   return (
     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
       <a
@@ -278,6 +298,17 @@ function MobileNavLink({ href, children, onClick, isActive = false }: NavLinkPro
     return null
   }
 
+  // Verificar se é uma rota e se está desativada
+  if (href.startsWith("/") && !href.includes("#")) {
+    // Extrair o nome da rota (por exemplo, "/contato" -> "contato", "/about" -> "about")
+    const routeName = href.split("/")[1] || "" // Pega o primeiro segmento após a barra
+
+    // Verificar se a rota existe no siteConfig e está desativada
+    if (routeName && siteConfig.routes[routeName as keyof typeof siteConfig.routes] === false) {
+      return null
+    }
+  }
+
   return (
     <motion.a
       href={href}
@@ -295,4 +326,6 @@ function MobileNavLink({ href, children, onClick, isActive = false }: NavLinkPro
     </motion.a>
   )
 }
+
+
 

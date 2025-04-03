@@ -142,6 +142,35 @@ interface FooterLinkProps {
 }
 
 function FooterLink({ href, children }: FooterLinkProps) {
+  // Verificar se é uma rota e se está desativada
+  if (href.startsWith("/")) {
+    // Extrair o nome da rota (por exemplo, "/contato" -> "contato", "/about" -> "about")
+    const routeName = href.split("/")[1] || "" // Pega o primeiro segmento após a barra
+
+    // Verificar se a rota existe no siteConfig e está desativada
+    if (routeName && siteConfig.routes[routeName as keyof typeof siteConfig.routes] === false) {
+      return null
+    }
+
+    // Se o link começar com '/' (rota interna), use o componente Link
+    return (
+      <li>
+        <Link href={href} className="text-neutral-600 hover:text-primary-500 transition-colors">
+          {children}
+        </Link>
+      </li>
+    )
+  }
+
+  // Se for uma seção e estiver desativada no siteConfig, não renderize o link
+  if (href.startsWith("#")) {
+    const sectionId = href.substring(1) // Remove o # do início
+    if (siteConfig.sections[sectionId as keyof typeof siteConfig.sections] === false) {
+      return null
+    }
+  }
+
+  // Para links externos ou âncoras, continue usando a tag <a>
   return (
     <li>
       <a href={href} className="text-neutral-600 hover:text-primary-500 transition-colors">
@@ -170,4 +199,6 @@ function SocialIcon({ icon, href, label }: SocialIconProps) {
     </a>
   )
 }
+
+
 

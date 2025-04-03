@@ -295,7 +295,7 @@ export default function Chatbot() {
                     <Bot className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-white text-lg font-medium">Strongbots</h3>
+                    <h3 className="text-white text-lg font-medium">Assistente Strongbots</h3>
                     <p className="text-white/70 text-xs">Especialista em IA Conversacional</p>
                   </div>
                 </div>

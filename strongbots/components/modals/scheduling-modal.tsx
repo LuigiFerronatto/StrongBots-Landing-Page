@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Dialog,
   DialogContent,
@@ -17,8 +17,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { SimpleCalendar } from "@/components/ui/simple-calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle2, Loader2, ArrowLeft, CalendarIcon, Clock, Send } from "lucide-react"
+import { CheckCircle2, Loader2, ArrowLeft, CalendarIcon, Clock, Send, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useAvailableDates } from "@/hooks/use-available-dates"
+import { useAvailableSlots } from "@/hooks/use-available-slots"
+import { useToast } from "@/components/ui/use-toast"
 
 interface SchedulingModalProps {
   open: boolean
@@ -39,6 +42,10 @@ export default function SchedulingModal({ open, onOpenChange }: SchedulingModalP
     message: "",
   })
 
+  const { toast } = useToast()
+  const { availableDates, isLoading: isLoadingDates, error: datesError } = useAvailableDates()
+  const { availableSlots, isLoading: isLoadingSlots, error: slotsError } = useAvailableSlots(date)
+
   // Reset modal state when closed
   useEffect(() => {
     if (!open) {
@@ -51,34 +58,17 @@ export default function SchedulingModal({ open, onOpenChange }: SchedulingModalP
     }
   }, [open])
 
-  // Available time slots - this could come from an API in a real application
-  const availableTimes = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"]
-
-  // Create a sense of urgency by showing limited slots
-  const availableTimeSlots = availableTimes.filter((_, index) => index < 3)
-
-  // Generate available dates (next 5 business days)
-  const generateAvailableDates = (): Date[] => {
-    const dates: Date[] = []
-    const today = new Date()
-    let daysToAdd = 1
-
-    while (dates.length < 5) {
-      const date = new Date()
-      date.setDate(today.getDate() + daysToAdd)
-
-      // Skip weekends
-      if (date.getDay() !== 0 && date.getDay() !== 6) {
-        dates.push(new Date(date))
+  // Focus no input quando o modal abre no passo 2
+  useEffect(() => {
+    if (open && step === 2) {
+      const nameInput = document.getElementById("name")
+      if (nameInput) {
+        setTimeout(() => {
+          nameInput.focus()
+        }, 300)
       }
-
-      daysToAdd++
     }
-
-    return dates
-  }
-
-  const availableDates = generateAvailableDates()
+  }, [open, step])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
@@ -89,15 +79,49 @@ export default function SchedulingModal({ open, onOpenChange }: SchedulingModalP
     setFormData((prev) => ({ ...prev, role: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    // Simulate form submission
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      // Criar evento no Google Calendar
+      const response = await fetch("/api/calendar/create-event", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          date: date?.toISOString(),
+          time,
+          name: formData.name,
+          email: formData.email,
+          company: formData.company,
+          role: formData.role,
+          message: formData.message,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Falha ao criar evento no calendário")
+      }
+
+      const data = await response.json()
+
       setSuccess(true)
-    }, 1500)
+      toast({
+        title: "Agendamento confirmado!",
+        description: `Sua consulta foi agendada para ${formatDate(date)} às ${time}. Você receberá um email de confirmação em breve.`,
+      })
+    } catch (error) {
+      console.error("Erro ao agendar consulta:", error)
+      toast({
+        title: "Erro no agendamento",
+        description: "Não foi possível confirmar seu agendamento. Por favor, tente novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const resetModal = () => {
@@ -111,16 +135,17 @@ export default function SchedulingModal({ open, onOpenChange }: SchedulingModalP
     onOpenChange(false)
   }
 
-  const handleDateSelect = (newDate: Date | undefined) => {
+  const handleDateSelect = useCallback((newDate: Date | undefined) => {
     setDate(newDate)
+    setTime(undefined) // Reset time when date changes
     if (newDate) {
       setStep(2)
     }
-  }
+  }, [])
 
-  const handleTimeSelect = (newTime: string) => {
+  const handleTimeSelect = useCallback((newTime: string) => {
     setTime(newTime)
-  }
+  }, [])
 
   // Format date for display
   const formatDate = (date: Date | undefined): string => {
@@ -169,13 +194,33 @@ export default function SchedulingModal({ open, onOpenChange }: SchedulingModalP
                 {step === 1 ? "Reserve sua consultoria gratuita" : "Complete seu agendamento"}
               </DialogTitle>
               <DialogDescription className="font-nunito mt-1 text-sm">
-                {step === 1 ? "Apenas 3 vagas disponíveis esta semana." : "Estamos quase lá! Preencha seus dados."}
+                {step === 1
+                  ? "Selecione uma data disponível em nossa agenda."
+                  : "Estamos quase lá! Preencha seus dados."}
               </DialogDescription>
             </DialogHeader>
 
             {step === 1 ? (
               <div className="grid gap-4 p-4 pt-3">
-                <SimpleCalendar selected={date} onSelect={handleDateSelect} availableDates={availableDates} />
+                {isLoadingDates ? (
+                  <div className="flex items-center justify-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <span className="ml-2">Carregando datas disponíveis...</span>
+                  </div>
+                ) : datesError ? (
+                  <div className="bg-red-50 p-4 rounded-lg text-red-800 flex items-start">
+                    <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Erro ao carregar datas</p>
+                      <p className="text-sm">{datesError}</p>
+                      <Button variant="outline" size="sm" className="mt-2" onClick={() => window.location.reload()}>
+                        Tentar novamente
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <SimpleCalendar selected={date} onSelect={handleDateSelect} availableDates={availableDates} />
+                )}
 
                 <DialogFooter className="flex flex-col-reverse sm:flex-row justify-between gap-2 border-t-0 mt-1 pt-0">
                   <Button
@@ -196,23 +241,38 @@ export default function SchedulingModal({ open, onOpenChange }: SchedulingModalP
                       <span className="font-medium text-foreground text-sm">Horários para {formatDate(date)}</span>
                     </div>
                     <div className="p-3">
-                      <div className="grid grid-cols-3 gap-2">
-                        {availableTimeSlots.map((t) => (
-                          <button
-                            key={t}
-                            type="button"
-                            onClick={() => handleTimeSelect(t)}
-                            className={cn(
-                              "font-nunito py-2 rounded-lg transition-all duration-200 text-sm",
-                              time === t
-                                ? "bg-primary-500 text-white shadow-sm"
-                                : "bg-secondary-50 text-foreground hover:bg-secondary-100",
-                            )}
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
+                      {isLoadingSlots ? (
+                        <div className="flex items-center justify-center p-4">
+                          <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+                          <span className="text-sm">Carregando horários...</span>
+                        </div>
+                      ) : slotsError ? (
+                        <div className="bg-red-50 p-3 rounded-lg text-red-800 text-sm">
+                          <p>{slotsError}</p>
+                        </div>
+                      ) : availableSlots.length === 0 ? (
+                        <div className="bg-amber-50 p-3 rounded-lg text-amber-800 text-sm">
+                          <p>Não há horários disponíveis para esta data. Por favor, selecione outra data.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {availableSlots.map((slot) => (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => handleTimeSelect(slot)}
+                              className={cn(
+                                "font-nunito py-2 rounded-lg transition-all duration-200 text-sm",
+                                time === slot
+                                  ? "bg-primary-500 text-white shadow-sm"
+                                  : "bg-secondary-50 text-foreground hover:bg-secondary-100",
+                              )}
+                            >
+                              {slot}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
