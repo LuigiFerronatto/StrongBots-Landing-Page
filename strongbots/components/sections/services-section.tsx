@@ -127,11 +127,9 @@ export default function ServicesSection() {
             {/* Floating image */}
             <div className="absolute -top-20 sm:-top-24 left-0 z-10 w-36 sm:w-48 md:w-72 lg:w-80 pointer-events-none float">
               <img
-                src="/chatbot-user.png"
-                alt="Profissional utilizando IA em dispositivo móvel"
-                width={500}
-                height={500}
-                className="object-contain"
+              src="/chatbot-user.png"
+              alt="Profissional utilizando IA em dispositivo móvel"
+              className="object-contain w-full h-full"
               />
             </div>
 
