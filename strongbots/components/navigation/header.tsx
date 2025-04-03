@@ -119,7 +119,7 @@ export default function Header() {
               Depoimentos
             </NavLink>
 
-            <NavLink href="/contato" isActive={pathname === "/contato"}>
+            <NavLink href="/contact" isActive={pathname === "/contact"}>
               Contato
             </NavLink>
 
@@ -212,7 +212,7 @@ export default function Header() {
                 Depoimentos
               </MobileNavLink>
 
-              <MobileNavLink href="/contato" onClick={() => setIsOpen(false)} isActive={pathname === "/contato"}>
+              <MobileNavLink href="/contact" onClick={() => setIsOpen(false)} isActive={pathname === "/contact"}>
                 Contato
               </MobileNavLink>
 

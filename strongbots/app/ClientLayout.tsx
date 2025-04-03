@@ -15,6 +15,14 @@ export default function ClientLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+        <meta name="theme-color" content="#ffffff" />
+        <meta name="description" content="Transforme seu negócio com soluções de IA. Ajudamos empresas a aproveitar o poder da IA conversacional para automatizar processos, melhorar experiências do cliente e impulsionar o crescimento." />
+        <meta name="keywords" content="IA, Inteligência Artificial, Consultoria, Chatbots, Automação, Atendimento ao Cliente, Vendas, Transformação Digital" />
+        <meta name="author" content="Strongbots" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="Strongbots | Consultoria em IA" />
+        <meta property="og:description" content="Transforme seu negócio com soluções de IA. Ajudamos empresas a aproveitar o poder da IA conversacional para automatizar processos, melhorar experiências do cliente e impulsionar o crescimento." />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         {/* Adicionar fontes locais */}
         <style jsx global>{`
           @font-face {

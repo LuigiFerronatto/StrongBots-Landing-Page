@@ -111,12 +111,10 @@ export default function HeroSection() {
                 size="xl"
                 className="w-full sm:w-auto transition-all duration-300 hover:translate-y-[-2px] group"
                 onClick={() => {
-                  document.getElementById("cases")?.scrollIntoView({
-                    behavior: "smooth",
-                  })
+                  window.location.href = "/contato"
                 }}
               >
-                Ver histórias de sucesso
+                Fale conosco
                 <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Button>
             </div>
@@ -206,4 +204,6 @@ export default function HeroSection() {
     </section>
   )
 }
+
+
 

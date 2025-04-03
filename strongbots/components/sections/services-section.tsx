@@ -127,7 +127,7 @@ export default function ServicesSection() {
             {/* Floating image */}
             <div className="absolute -top-20 sm:-top-24 left-0 z-10 w-36 sm:w-48 md:w-72 lg:w-80 pointer-events-none float">
               <img
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ChatGPT%20Image%201%20de%20abr.%20de%202025%2C%2018_47_48-2zue9GrgLYFFTxXdwQQGGBSxrz0uHh.png"
+                src="/chatbot-user.png"
                 alt="Profissional utilizando IA em dispositivo móvel"
                 width={500}
                 height={500}
