@@ -1,3 +1,4 @@
+// config/ai-config.ts
 import { generateSystemPrompt } from "./bot-prompt"
 
 /**
@@ -33,9 +34,9 @@ export const aiConfig = {
 
   // Debug settings
   debug: {
-    enabled: false,
-    logRequests: false,
-    logResponses: false,
+    enabled: true,
+    logRequests: true,
+    logResponses: true,
   },
 }
 
