@@ -12,8 +12,8 @@ export const siteConfig = {
     about: true,
     services: true,
     process: true,
-    cases: true, // Desativado até termos cases reais
-    testimonials: true, // Desativado até termos depoimentos reais
+    cases: false, // Desativado até termos cases reais
+    testimonials: false, // Desativado até termos depoimentos reais
     cta: true,
   },
 

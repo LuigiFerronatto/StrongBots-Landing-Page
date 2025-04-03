@@ -7,6 +7,7 @@ import { useChatbot } from "@/hooks/use-chatbot"
 import { FadeInWhenVisible } from "@/components/ui/animations"
 import { useState } from "react"
 import SchedulingModal from "@/components/modals/scheduling-modal"
+import Image from "next/image"
 
 export default function CtaSection() {
   const { setIsOpen } = useChatbot()
@@ -90,7 +91,7 @@ export default function CtaSection() {
             </div>
 
             <div className="relative h-64 md:h-auto order-first md:order-last overflow-hidden">
-              <img
+              <Image
                 src="/cta-image.png"
                 alt="AI Consulting"
                 className="object-cover w-full h-full absolute inset-0 transition-transform duration-700 hover:scale-105"

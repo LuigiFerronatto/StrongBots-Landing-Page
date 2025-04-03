@@ -313,14 +313,14 @@ export default function Chatbot() {
               {/* Empty state with illustration */}
               {messages.length === 1 && (
                 <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50">
-                  <div className="relative w-48 h-48 mb-6">
+                  {/* <div className="relative w-48 h-48 mb-6">
                     <Image
                       src="/chatbot-user.png"
                       alt="Usuário interagindo com chatbot"
                       fill
                       className="object-contain"
                     />
-                  </div>
+                  </div> */}
                   <h3 className="text-xl font-bold text-center mb-2">Desbloqueie o potencial da sua empresa</h3>
                   <p className="text-center text-neutral-600 mb-6">
                     Nossos clientes aumentam receitas em até 40% com nossas soluções. Como posso ajudar você hoje?
