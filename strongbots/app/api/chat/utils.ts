@@ -1,7 +1,27 @@
 import type { FunctionCall } from "@/app/api/chat/function-calls"
 import { executeFunction } from "@/app/api/chat/function-service"
 import { logResponse } from "@/app/api/chat/response-logger"
+import { getUserFriendlyErrorMessage, SchedulingStatus } from "@/app/api/chat/scheduling-feedback"
 
+// Helper function to execute with timeout
+async function executeWithTimeout<T>(promise: Promise<T>, timeoutMs = 10000): Promise<T> {
+  let timeoutId: NodeJS.Timeout
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`Operation timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
+  })
+
+  try {
+    const result = (await Promise.race([promise, timeoutPromise])) as T
+    clearTimeout(timeoutId!)
+    return result
+  } catch (error) {
+    clearTimeout(timeoutId!)
+    throw error
+  }
+}
 
 // Função para processar a chamada de função
 export async function processFunctionCall(functionCall: FunctionCall) {
@@ -18,6 +38,15 @@ export async function processFunctionCall(functionCall: FunctionCall) {
       args = {}
     }
 
+    // Add status update for scheduling-related functions
+    let statusUpdate = null
+    if (functionCall.name === "getAvailableSlots") {
+      statusUpdate = SchedulingStatus.CHECKING_AVAILABILITY
+    } else if (functionCall.name === "collectContactInfo") {
+      statusUpdate = SchedulingStatus.COLLECTING_INFO
+    } else if (functionCall.name === "scheduleAppointment") {
+      statusUpdate = SchedulingStatus.SCHEDULING
+    }
 
     // Pré-processamento de argumentos específicos para cada função
     if (functionCall.name === "getAvailableSlots") {
@@ -32,7 +61,6 @@ export async function processFunctionCall(functionCall: FunctionCall) {
     } else if (functionCall.name === "scheduleAppointment") {
       console.log("Processando agendamento com argumentos:", JSON.stringify(args, null, 2))
 
-
       // VERIFICAÇÃO CRÍTICA: Impedir agendamentos com informações genéricas ou incompletas
       if (
         args.titulo &&
@@ -45,9 +73,10 @@ export async function processFunctionCall(functionCall: FunctionCall) {
           success: false,
           error: "É necessário fornecer o nome completo do usuário antes de agendar.",
           name: functionCall.name,
+          statusUpdate: SchedulingStatus.FAILED,
+          userMessage: "Precisamos do seu nome completo para prosseguir com o agendamento.",
         }
       }
-
 
       // Verificar se há email válido
       if (
@@ -61,9 +90,10 @@ export async function processFunctionCall(functionCall: FunctionCall) {
           success: false,
           error: "É necessário fornecer um email válido antes de agendar.",
           name: functionCall.name,
+          statusUpdate: SchedulingStatus.FAILED,
+          userMessage: "Precisamos de um email válido para enviar a confirmação do agendamento.",
         }
       }
-
 
       // Verificar se há descrição com informações completas
       if (!args.descricao || args.descricao.length < 50) {
@@ -72,9 +102,10 @@ export async function processFunctionCall(functionCall: FunctionCall) {
           success: false,
           error: "É necessário coletar mais informações sobre o objetivo da consulta antes de agendar.",
           name: functionCall.name,
+          statusUpdate: SchedulingStatus.FAILED,
+          userMessage: "Precisamos de mais informações sobre o objetivo da sua consulta para melhor atendê-lo.",
         }
       }
-
 
       // Se data_hora_inicio ou data_hora_fim não estiverem no formato ISO 8601,
       // tentar converter a partir de data e hora separadas
@@ -85,21 +116,17 @@ export async function processFunctionCall(functionCall: FunctionCall) {
           console.log(`Data convertida para: ${args.date}`)
         }
 
-
         args.data_hora_inicio = convertToISO8601(args.date, args.time)
-
 
         // Calcular data_hora_fim (30 minutos depois por padrão)
         const endTime = new Date(args.data_hora_inicio)
         endTime.setMinutes(endTime.getMinutes() + 30)
         args.data_hora_fim = endTime.toISOString()
 
-
         // Remover os campos originais para evitar confusão
         delete args.date
         delete args.time
       }
-
 
       // Garantir que convidados seja um array
       if (args.email && !args.convidados) {
@@ -107,7 +134,6 @@ export async function processFunctionCall(functionCall: FunctionCall) {
       } else if (typeof args.convidados === "string") {
         args.convidados = [args.convidados]
       }
-
 
       // Garantir que o tipo de serviço esteja definido
       if (args.service && !args.tipo_servico) {
@@ -117,7 +143,6 @@ export async function processFunctionCall(functionCall: FunctionCall) {
         // Definir um tipo de serviço padrão se não for fornecido
         args.tipo_servico = "Consultoria inicial gratuita"
       }
-
 
       // Garantir que o título esteja definido
       if (!args.titulo) {
@@ -130,19 +155,16 @@ export async function processFunctionCall(functionCall: FunctionCall) {
         }
       }
 
-
       // Converter contactInfo para convidados se necessário
       if (args.contactInfo && !args.convidados) {
         if (args.contactInfo.email) {
           args.convidados = [args.contactInfo.email]
         }
 
-
         // Usar o nome do contato para o título se não estiver definido
         if (args.contactInfo.name && !args.titulo) {
           args.titulo = `Consulta com ${args.contactInfo.name}`
         }
-
 
         // Adicionar informações de contato à descrição
         if (!args.descricao) {
@@ -158,7 +180,6 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
           `.trim()
         }
       }
-
 
       // Verificar se temos informações suficientes
       if (
@@ -176,10 +197,11 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
             success: false,
             error: "É necessário fornecer um email válido para o agendamento.",
             name: functionCall.name,
+            statusUpdate: SchedulingStatus.FAILED,
+            userMessage: "Precisamos de um email válido para enviar a confirmação do agendamento.",
           }
         }
       }
-
 
       // Verificar se o título está completo
       if (args.titulo === "Consulta com" || !args.titulo) {
@@ -193,10 +215,11 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
             success: false,
             error: "É necessário fornecer um nome válido para o agendamento.",
             name: functionCall.name,
+            statusUpdate: SchedulingStatus.FAILED,
+            userMessage: "Precisamos do seu nome completo para prosseguir com o agendamento.",
           }
         }
       }
-
 
       // Adicionar nome da empresa ao título se disponível
       if (args.company && !args.titulo.includes(args.company)) {
@@ -205,11 +228,15 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
         args.titulo += ` - ${args.contactInfo.company}`
       }
 
+      // Add the user's email to convidados if not already present
+      if (args.convidados && !args.convidados.includes("luigiferronatto1@gmail.com")) {
+        args.convidados.push("luigiferronatto1@gmail.com")
+        console.log("Added luigiferronatto1@gmail.com to attendees")
+      }
 
       console.log("Argumentos processados para agendamento:", JSON.stringify(args, null, 2))
     } else if (functionCall.name === "collectContactInfo") {
       console.log("Processando coleta de informações de contato:", JSON.stringify(args, null, 2))
-
 
       // Validar informações mínimas necessárias
       if (!args.name || args.name.trim().length < 2 || args.name === "Usuário Anônimo") {
@@ -218,9 +245,10 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
           success: false,
           error: "É necessário fornecer um nome válido.",
           name: functionCall.name,
+          statusUpdate: SchedulingStatus.FAILED,
+          userMessage: "Por favor, informe seu nome completo para que possamos prosseguir.",
         }
       }
-
 
       if (!args.email || !args.email.includes("@") || args.email === "usuario.anonimo@email.com") {
         console.log("Email inválido")
@@ -228,9 +256,10 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
           success: false,
           error: "É necessário fornecer um email válido.",
           name: functionCall.name,
+          statusUpdate: SchedulingStatus.FAILED,
+          userMessage: "Por favor, informe um email válido para que possamos enviar a confirmação.",
         }
       }
-
 
       // Verificar se a empresa foi fornecida
       if (!args.company || args.company.trim().length < 2) {
@@ -239,9 +268,10 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
           success: false,
           error: "É necessário fornecer o nome da empresa.",
           name: functionCall.name,
+          statusUpdate: SchedulingStatus.FAILED,
+          userMessage: "Por favor, informe o nome da sua empresa.",
         }
       }
-
 
       // Verificar se o cargo foi fornecido
       if (!args.role || args.role.trim().length < 2) {
@@ -250,9 +280,10 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
           success: false,
           error: "É necessário fornecer o cargo ou função na empresa.",
           name: functionCall.name,
+          statusUpdate: SchedulingStatus.FAILED,
+          userMessage: "Por favor, informe seu cargo ou função na empresa.",
         }
       }
-
 
       // Verificar se os objetivos foram fornecidos
       if (!args.objectives || args.objectives.trim().length < 5) {
@@ -261,9 +292,10 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
           success: false,
           error: "É necessário fornecer os objetivos com chatbots/IA.",
           name: functionCall.name,
+          statusUpdate: SchedulingStatus.FAILED,
+          userMessage: "Por favor, descreva seus principais objetivos com chatbots/IA.",
         }
       }
-
 
       // Verificar se os desafios foram fornecidos
       if (!args.challenges || args.challenges.trim().length < 5) {
@@ -272,9 +304,10 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
           success: false,
           error: "É necessário fornecer os desafios ou dores atuais.",
           name: functionCall.name,
+          statusUpdate: SchedulingStatus.FAILED,
+          userMessage: "Por favor, descreva os desafios ou dores que você espera resolver.",
         }
       }
-
 
       // Verificar se temos informações suficientes para agendar automaticamente
       if (args.name && args.email && args.company && args.role && args.objectives && args.challenges) {
@@ -285,31 +318,58 @@ Mensagem: ${args.contactInfo.message || "Nenhuma mensagem adicional"}
       }
     }
 
+    // Executar a função com os argumentos processados com um timeout adequado
+    // Use a longer timeout for scheduling operations
+    const timeoutDuration = functionCall.name === "scheduleAppointment" ? 20000 : 10000
 
-    // Executar a função com os argumentos processados
-    const functionResult = await executeFunction(functionCall.name, args)
+    // Add a delay between API calls to prevent overwhelming the API
+    if (functionCall.name === "scheduleAppointment") {
+      await new Promise((resolve) => setTimeout(resolve, 500))
+    }
+
+    const functionResult = await executeWithTimeout(executeFunction(functionCall.name, args), timeoutDuration)
     console.log(`Resultado da função ${functionCall.name}:`, JSON.stringify(functionResult, null, 2))
-
 
     // Registrar o resultado para depuração
     logResponse(`function-result-${functionCall.name}`, functionResult)
 
+    // Add status update to the result
+    if (functionCall.name === "scheduleAppointment" && functionResult.success) {
+      statusUpdate = SchedulingStatus.COMPLETED
+    } else if (functionCall.name === "scheduleAppointment" && !functionResult.success) {
+      statusUpdate = SchedulingStatus.FAILED
+    }
 
     return {
       success: true,
       result: functionResult,
       name: functionCall.name,
+      statusUpdate,
     }
   } catch (error) {
     console.error(`Error executing function ${functionCall.name}:`, error)
+
+    // Determine appropriate status update based on the error
+    let statusUpdate = SchedulingStatus.FAILED
+    if (error instanceof Error && error.message.includes("timeout")) {
+      statusUpdate = SchedulingStatus.TIMEOUT
+    }
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error:
+        error instanceof Error
+          ? error.message.includes("timeout")
+            ? "Tempo limite excedido. Por favor, tente novamente."
+            : error.message
+          : "Erro desconhecido",
       name: functionCall.name,
+      recoverable: true, // Flag to indicate this error can be retried
+      statusUpdate,
+      userMessage: getUserFriendlyErrorMessage(error instanceof Error ? error.message : undefined, functionCall.name),
     }
   }
 }
-
 
 // Função para converter datas para ISO 8601
 export function convertToISO8601(date: string, time: string): string {
@@ -317,32 +377,25 @@ export function convertToISO8601(date: string, time: string): string {
   const [year, month, day] = date.split("-").map(Number)
   const [hour, minute] = time.split(":").map(Number)
 
-
   // Criar objeto Date
   const dateObj = new Date(year, month - 1, day, hour, minute)
-
 
   // Retornar string ISO 8601
   return dateObj.toISOString()
 }
 
-
 // Função para converter expressões de data em datas reais
 export function parseDateExpression(expression: string): string {
   console.log(`Convertendo expressão de data: "${expression}"`)
-
 
   // Obter a data atual
   const today = new Date()
   console.log(`Data atual: ${today.toISOString()}`)
 
-
   const resultDate = new Date(today)
-
 
   // Converter para minúsculas para facilitar a comparação
   const lowerExpression = expression.toLowerCase().trim()
-
 
   if (lowerExpression === "hoje") {
     console.log("Expressão identificada: hoje")
@@ -371,7 +424,6 @@ export function parseDateExpression(expression: string): string {
       sabado: 6,
     }
 
-
     // Encontrar o dia da semana mencionado
     let targetDay = -1
     for (const [day, value] of Object.entries(weekdays)) {
@@ -382,17 +434,14 @@ export function parseDateExpression(expression: string): string {
       }
     }
 
-
     if (targetDay >= 0) {
       const currentDay = today.getDay()
       let daysToAdd = targetDay - currentDay
-
 
       // Se o dia já passou esta semana, ir para a próxima
       if (daysToAdd <= 0) {
         daysToAdd += 7
       }
-
 
       resultDate.setDate(today.getDate() + daysToAdd)
       console.log(`Dias a adicionar: ${daysToAdd}, Nova data: ${resultDate.toISOString()}`)
@@ -413,7 +462,6 @@ export function parseDateExpression(expression: string): string {
       return expression // Já está no formato correto
     }
 
-
     // Tentar interpretar como uma data no formato DD/MM/YYYY
     const brDateMatch = expression.match(/(\d{2})\/(\d{2})\/(\d{4})/)
     if (brDateMatch) {
@@ -421,7 +469,6 @@ export function parseDateExpression(expression: string): string {
       console.log(`Data no formato DD/MM/YYYY convertida para YYYY-MM-DD: ${year}-${month}-${day}`)
       return `${year}-${month}-${day}`
     }
-
 
     // Tentar interpretar como uma data no formato DD/MM
     const shortDateMatch = expression.match(/(\d{2})\/(\d{2})/)
@@ -432,26 +479,20 @@ export function parseDateExpression(expression: string): string {
       return `${year}-${month}-${day}`
     }
 
-
     // Se não conseguir interpretar, retornar a data atual
     console.warn(`Não foi possível interpretar a expressão de data: ${expression}. Usando data atual.`)
   }
-
 
   // Formatar a data resultante como YYYY-MM-DD
   const year = resultDate.getFullYear()
   const month = String(resultDate.getMonth() + 1).padStart(2, "0")
   const day = String(resultDate.getDate()).padStart(2, "0")
 
-
   const formattedDate = `${year}-${month}-${day}`
   console.log(`Data formatada final: ${formattedDate}`)
 
-
   return formattedDate
 }
-
-
 
 
 

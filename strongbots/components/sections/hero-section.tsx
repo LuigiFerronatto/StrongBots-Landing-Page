@@ -111,7 +111,7 @@ export default function HeroSection() {
                 size="xl"
                 className="w-full sm:w-auto transition-all duration-300 hover:translate-y-[-2px] group"
                 onClick={() => {
-                  window.location.href = "/contato"
+                  window.location.href = "/contact"
                 }}
               >
                 Fale conosco

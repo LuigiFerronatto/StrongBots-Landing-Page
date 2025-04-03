@@ -34,7 +34,7 @@ export default function CtaSection() {
                 </div>
 
                 <h2 className="text-2xl md:text-3xl font-bold mb-4">Junte-se às empresas que já estão no futuro</h2>
-                <p className="text-white/90 mb-8 max-w-2xl mx-auto">
+                <p className=" mb-8 max-w-2xl mx-auto">
                   Agende uma consultoria gratuita com nossos especialistas e descubra como a IA conversacional pode
                   transformar seu negócio.
                 </p>

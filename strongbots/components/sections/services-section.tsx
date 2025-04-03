@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/design-system/card"
 import { FadeInWhenVisible, StaggerContainer, StaggerItem } from "@/components/design-system/animation"
 import { motion } from "framer-motion"
+import Image from "next/image"
 
 interface ServiceCardProps {
   icon: React.ReactNode
@@ -126,10 +127,10 @@ export default function ServicesSection() {
           <div className="grid md:grid-cols-2 gap-6 items-center p-6 sm:p-8 md:p-10 relative">
             {/* Floating image */}
             <div className="absolute -top-20 sm:-top-24 left-0 z-10 w-36 sm:w-48 md:w-72 lg:w-80 pointer-events-none float">
-              <img
+              <Image
                 src="/chatbot-user.png"
                 alt="Profissional utilizando IA em dispositivo móvel"
-                width={500}
+                width={600}
                 height={500}
                 className="object-contain"
               />

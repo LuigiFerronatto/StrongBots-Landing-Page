@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { AlertCircle, Info, Loader2 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 
 export default function SiteConfigPage() {
   const [config, setConfig] = useState(defaultSiteConfig)
@@ -111,14 +112,7 @@ export default function SiteConfigPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="container mx-auto py-12 px-4 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p>Carregando configurações...</p>
-        </div>
-      </div>
-    )
+    return <LoadingScreen message="Carregando configurações" fullScreen={false} className="min-h-[400px]" />
   }
 
   return (
@@ -303,4 +297,6 @@ export default function SiteConfigPage() {
     </div>
   )
 }
+
+
 

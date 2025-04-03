@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft, Mail, Phone, MapPin, Send, Clock, ArrowRight, CheckCircle, Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import MainLayout from "@/components/layouts/main-layout"
 import { siteConfig } from "@/config/site-config"
 import { FadeInWhenVisible } from "@/components/ui/animations"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 
 export default function ContatoPage() {
   const [formData, setFormData] = useState({
@@ -25,6 +26,21 @@ export default function ContatoPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Simular carregamento de dados
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (isLoading) {
+    return <LoadingScreen message="Carregando formulário de contato" />
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -324,7 +340,7 @@ export default function ContatoPage() {
         <section className="container mx-auto px-4 mb-16">
           <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-2xl p-8 md:p-12 text-white text-center">
             <h2 className="text-2xl md:text-3xl font-bold mb-4">Pronto para transformar seu negócio?</h2>
-            <p className="text-white/90 mb-8 max-w-2xl mx-auto">
+            <p className=" mb-8 max-w-2xl mx-auto">
               Agende uma consultoria gratuita com nossos especialistas e descubra como a IA conversacional pode
               impulsionar seus resultados.
             </p>
