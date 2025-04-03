@@ -340,7 +340,7 @@ export default function ContatoPage() {
         <section className="container mx-auto px-4 mb-16">
           <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-2xl p-8 md:p-12 text-white text-center">
             <h2 className="text-2xl md:text-3xl font-bold mb-4">Pronto para transformar seu negócio?</h2>
-            <p className="text-white/90 mb-8 max-w-2xl mx-auto">
+            <p className=" mb-8 max-w-2xl mx-auto">
               Agende uma consultoria gratuita com nossos especialistas e descubra como a IA conversacional pode
               impulsionar seus resultados.
             </p>
