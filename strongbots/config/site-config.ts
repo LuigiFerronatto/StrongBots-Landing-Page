@@ -12,18 +12,18 @@ export const siteConfig = {
     about: true,
     services: true,
     process: true,
-    cases: true, // Desativado até termos cases reais
-    testimonials: true, // Desativado até termos depoimentos reais
+    cases: false, // Desativado até termos cases reais
+    testimonials: false, // Desativado até termos depoimentos reais
     cta: true,
   },
 
   // Rotas do site que podem ser ativadas/desativadas
   routes: {
     admin: true, // Painel administrativo
-    about: true, // Página Sobre Nós
+    about: false, // Página Sobre Nós
     contact: true, // Página de Contato
-    blog: true, // Blog
-    cases: true, // Página de Cases
+    blog: false, // Blog
+    cases: false, // Página de Cases
     terms: true, // Termos de Serviço
     privacy: true, // Política de Privacidade
     cookies: true, // Política de Cookies

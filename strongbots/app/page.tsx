@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useAnimation } from "framer-motion"
 import { useHasMounted } from "@/hooks/use-has-mounted"
 
@@ -19,10 +19,14 @@ import TestimonialsSection from "@/components/sections/testimonials-section"
 import CtaSection from "@/components/sections/cta-section"
 import AboutSection from "@/components/about-section"
 
+// Loading screen component
+import { LoadingScreen } from "@/components/ui/loading-screen"
+
 export default function Home() {
   const controls = useAnimation()
   const mounted = useHasMounted()
   const { config, isLoading } = useSiteConfig()
+  const [pageReady, setPageReady] = useState(false)
 
   useEffect(() => {
     if (mounted) {
@@ -43,16 +47,35 @@ export default function Home() {
         "/chatbot-user.png",
       ]
 
-      preloadImages.forEach((src) => {
-        const img = new Image()
-        img.src = src
-        img.crossOrigin = "anonymous"
+      const imagePromises = preloadImages.map((src) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image()
+          img.src = src
+          img.crossOrigin = "anonymous"
+          img.onload = resolve
+          img.onerror = reject
+        })
       })
+
+      // Simular um tempo mínimo de carregamento para evitar flash
+      const minLoadTime = new Promise((resolve) => setTimeout(resolve, 1500))
+
+      // Quando todas as imagens estiverem carregadas e o tempo mínimo passar
+      Promise.all([...imagePromises, minLoadTime])
+        .then(() => {
+          setPageReady(true)
+        })
+        .catch((error) => {
+          console.error("Erro ao carregar imagens:", error)
+          // Mesmo com erro, mostrar a página após um tempo
+          setTimeout(() => setPageReady(true), 2000)
+        })
     }
   }, [controls, mounted])
 
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>
+  // Mostrar tela de carregamento enquanto as imagens e configurações estão sendo carregadas
+  if (isLoading || !mounted || !pageReady) {
+    return <LoadingScreen />
   }
 
   return (
@@ -67,4 +90,6 @@ export default function Home() {
     </MainLayout>
   )
 }
+
+
 

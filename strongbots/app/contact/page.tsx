@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft, Mail, Phone, MapPin, Send, Clock, ArrowRight, CheckCircle, Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import MainLayout from "@/components/layouts/main-layout"
 import { siteConfig } from "@/config/site-config"
 import { FadeInWhenVisible } from "@/components/ui/animations"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 
 export default function ContatoPage() {
   const [formData, setFormData] = useState({
@@ -25,6 +26,21 @@ export default function ContatoPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Simular carregamento de dados
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (isLoading) {
+    return <LoadingScreen message="Carregando formulário de contato" />
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
